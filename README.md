@@ -1,2 +1,2 @@
 # melcpp
-An event loop written in c++
+Learning and building an event loop in c++ one step at a time
