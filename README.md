@@ -1,2 +1,2 @@
 # melcpp
-An event loop written in cpl
+An event loop written in c++
