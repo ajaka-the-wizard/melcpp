@@ -1,6 +1,7 @@
 #include <iostream>
+#include "loop.h"
 
 int main() {
-    std::cout << "Hello, world!\n";
+    ExampleUsage();
     return 0;
 }
