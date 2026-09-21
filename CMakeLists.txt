@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(melcpp
     src/main.cpp
-    src/loop.cpp
 )
 
 target_include_directories(melcpp
