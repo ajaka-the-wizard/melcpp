@@ -32,26 +32,47 @@ private:
     size_t max;
     size_t count;
     size_t id = 0;
+    std::shared_ptr<ThreadSignal> signal;
+    std::mutex ft_mutex;
 
 public:
-    FutureTasks(size_t max) : max(max), count(0) {};
+    FutureTasks(size_t max, std::shared_ptr<ThreadSignal> signal) : max(max), count(0), signal(signal) {};
     std::expected<void, Error> enqueue(FutureStruct &&f)
     {
-        if (count > max)
-            return std::unexpected(StackOverflow{});
-        f.id = id;
-        ft.push(std::move(f));
-        ++count;
-        ++id;
+        {
+            std::lock_guard<std::mutex> lock(ft_mutex);
+
+            if (count >= max)
+                return std::unexpected(StackOverflow{});
+
+            f.id = id;
+
+            ft.push(std::move(f));
+            ++count;
+            ++id;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(signal->mutex);
+            signal->has_work = true;
+        }
+        signal->cv.notify_one();
+
         return {};
     }
 
     std::optional<FutureStruct> pop()
     {
-        if (ft.empty())
-            return std::nullopt;
-        auto top = ft.top();
-        ft.pop();
+        FutureStruct top;
+        {
+            std::lock_guard<std::mutex> lock(ft_mutex);
+            if (ft.empty())
+                return std::nullopt;
+
+            top = ft.top();
+            ft.pop();
+            --count;
+        }
         return top;
     }
 

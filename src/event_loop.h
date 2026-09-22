@@ -12,15 +12,21 @@ class EventLoop
 private:
     std::shared_ptr<Tasks> tasks;
     std::shared_ptr<FutureTasks> ft;
-    Executor e;
+    std::unique_ptr<Executor> e;
     std::jthread executor_thread;
 
 public:
-    EventLoop(size_t stack_size) : tasks(std::make_shared<Tasks>(stack_size / 2)), ft(std::make_shared<FutureTasks>(stack_size / 2)), e(tasks, ft, std::chrono::microseconds(200)) {};
+    EventLoop(size_t stack_size)
+    {
+        auto signal = std::make_shared<ThreadSignal>();
+        tasks = std::make_shared<Tasks>(stack_size / 2, signal);
+        ft = std::make_shared<FutureTasks>(stack_size / 2, signal);
+        e = std::make_unique<Executor>(tasks, ft, std::chrono::microseconds(200));
+    };
     void Run()
     {
         executor_thread = std::jthread([this](std::stop_token t)
-                                       { e.Init(t); });
+                                       { e->Init(t); });
     }
     ~EventLoop()
     {
@@ -45,7 +51,6 @@ public:
         auto f = FutureStruct{};
         f.func = func;
         f.in = std::chrono::steady_clock::now() + delay;
-        ft->enqueue(std::move(f));
-        return {};
+        return ft->enqueue(std::move(f));
     }
 };
